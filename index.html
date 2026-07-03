@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ServiceDesk — Computer Service Manager</title>
+<style>
+  :root{
+    --navy:#0F1F3D;
+    --navy-light:#16295A;
+    --amber:#F5A623;
+    --amber-dark:#D4890A;
+    --bg:#F4F5F7;
+    --card:#FFFFFF;
+    --text:#1B2432;
+    --muted:#6B7280;
+    --border:#E3E6EA;
+    --success:#1E8E5A;
+    --success-bg:#E6F5EC;
+    --warning:#B5750A;
+    --warning-bg:#FDF1DD;
+    --danger:#C13B3B;
+    --danger-bg:#FBE9E9;
+    --info:#2B5FAD;
+    --info-bg:#E8F0FC;
+    --radius:8px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-size:14px;}
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:#c7ccd3;border-radius:4px;}
+
+  /* Layout */
+  #app{display:flex;min-height:100vh;}
+  #sidebar{
+    width:220px;flex-shrink:0;background:var(--navy);color:#fff;
+    display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;
+  }
+  #sidebar .brand{
+    padding:20px 18px;font-weight:700;font-size:17px;letter-spacing:.3px;
+    border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;
+  }
+  #sidebar .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--amber);}
+  #sidebar nav{flex:1;padding:14px 10px;}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;
+    color:#C6CEDD;cursor:pointer;margin-bottom:2px;font-size:13.5px;user-select:none;
+  }
+  .nav-item:hover{background:rgba(255,255,255,.06);color:#fff;}
+  .nav-item.active{background:var(--amber);color:var(--navy);font-weight:700;}
+  .nav-item .icon{width:18px;text-align:center;}
+  #sidebar .footer{padding:14px 18px;font-size:11px;color:#8592AB;border-top:1px solid rgba(255,255,255,.08);}
+
+  #main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-width:0;}
+  #topbar{
+    background:var(--card);border-bottom:1px solid var(--border);
+    padding:14px 26px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;
+    gap: 20px;
+  }
+  #topbar h1{font-size:19px;margin:0;font-weight:700;}
+  #topbar .sub{color:var(--muted);font-size:12.5px;margin-top:2px;}
+  #content{padding:24px 26px;flex:1;}
+
+  /* Header Global Search Styles */
+  .search-container { position: relative; width: 320px; }
+  .global-search-input {
+    padding: 10px 14px 10px 36px; border: 1px solid var(--border); border-radius: 20px;
+    font-size: 13.5px; width: 100%; background: #F8F9FA; transition: all 0.2s ease;
+  }
+  .global-search-input:focus { background: #fff; border-color: var(--amber); outline: none; box-shadow: 0 0 0 3px rgba(245,166,35,0.15); }
+  .search-icon-label { position: absolute; left: 13px; top: 11px; color: var(--muted); pointer-events: none; font-size: 14px; }
+  .search-results-dropdown {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: #fff;
+    border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    max-height: 280px; overflow-y: auto; z-index: 99; display: none;
+  }
+  .search-results-dropdown.show { display: block; }
+  .search-row { padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+  .search-row:last-child { border-bottom: none; }
+  .search-row:hover { background: #F4F6F9; }
+  .search-row .name { font-weight: 600; color: var(--navy); }
+  .search-row .meta { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
+
+  .btn{
+    background:var(--navy);color:#fff;border:none;padding:9px 16px;border-radius:6px;
+    font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn:hover{background:var(--navy-light);}
+  .btn.amber{background:var(--amber);color:var(--navy);}
+  .btn.amber:hover{background:var(--amber-dark);color:#fff;}
+  .btn.ghost{background:transparent;color:var(--navy);border:1px solid var(--border);}
+  .btn.ghost:hover{background:#eef0f3;}
+  .btn.danger{background:var(--danger);}
+  .btn.danger:hover{background:#a12f2f;}
+  .btn.sm{padding:5px 10px;font-size:12px;}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+  .grid{display:grid;gap:16px;}
+  .grid.cols-4{grid-template-columns:repeat(4,1fr);}
+  .grid.cols-3{grid-template-columns:repeat(3,1fr);}
+  .grid.cols-2{grid-template-columns:repeat(2,1fr);}
+  @media(max-width:900px){.grid.cols-4,.grid.cols-3,.grid.cols-2{grid-template-columns:1fr;}}
+
+  .stat{padding:16px 18px;}
+  .stat .num{font-size:26px;font-weight:800;color:var(--navy);}
+  .stat .label{color:var(--muted);font-size:12.5px;margin-top:2px;}
+
+  table{width:100%;border-collapse:collapse;}
+  th{
+    text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;
+    color:var(--muted);padding:10px 12px;border-bottom:2px solid var(--border);
+  }
+  td{padding:11px 12px;border-bottom:1px solid var(--border);font-size:13.5px;vertical-align:middle;}
+  tr:hover td{background:#FAFBFC;}
+  .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+
+  .badge{
+    display:inline-block;padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:700;
+  }
+  .badge.received{background:var(--info-bg);color:var(--info);}
+  .badge.diagnosis{background:var(--warning-bg);color:var(--warning);}
+  .badge.approval{background:#F3E8FD;color:#7B3FBF;}
+  .badge.repair{background:var(--warning-bg);color:var(--warning);}
+  .badge.ready{background:var(--success-bg);color:var(--success);}
+  .badge.delivered{background:#EAECEF;color:#4B5563;}
+  .badge.cancelled{background:var(--danger-bg);color:var(--danger);}
+
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap;}
+  .search{
+    padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:260px;background:#fff;
+  }
+  select, input[type=text], input[type=number], input[type=date], textarea{
+    padding:9px 11px;border:1px solid var(--border);border-radius:6px;font-size:13.5px;width:100%;
+    font-family:inherit;background:#fff;color:var(--text);
+  }
+  textarea{resize:vertical;min-height:60px;}
+  label{font-size:12.5px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px;}
+  .field{margin-bottom:14px;}
+
+  /* Modal Setup */
+  .overlay{
+    position:fixed;inset:0;background:rgba(15,20,35,.5);display:none;align-items:flex-start;justify-content:center;
+    z-index:100;padding:40px 20px;overflow:auto;
+  }
+  .overlay.show{display:flex;}
+  .modal{background:#fff;border-radius:10px;width:100%;max-width:560px;padding:0;overflow:hidden;}
+  .modal-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+  .modal-head h2{margin:0;font-size:16.5px;}
+  .modal-body{padding:20px 22px;max-height:65vh;overflow:auto;}
+  .modal-foot{padding:16px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;}
+  .close-x{cursor:pointer;color:var(--muted);font-size:20px;line-height:1;background:none;border:none;}
+
+  /* Nested/Secondary Modal Layer for Quick Add Extensions */
+  .sub-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;
+    z-index:200;padding:20px;
+  }
+  .sub-overlay.show{display:flex;}
+
+  .empty{text-align:center;padding:60px 20px;color:var(--muted);}
+  .empty .big{font-size:38px;margin-bottom:10px;}
+
+  .kanban{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;overflow-x:auto;}
+  @media(max-width:1100px){.kanban{grid-template-columns:repeat(3,1fr);}}
+  .kcol{background:#EDEFF3;border-radius:8px;padding:10px;min-height:120px;}
+  .kcol h3{font-size:12px;text-transform:uppercase;color:var(--muted);margin:2px 6px 10px;display:flex;justify-content:space-between;}
+  .kcard{
+    background:#fff;border-radius:6px;padding:10px 11px;margin-bottom:8px;border-left:4px solid var(--amber);
+    box-shadow:0 1px 2px rgba(0,0,0,.05);cursor:pointer;
+  }
+  .kcard:hover{box-shadow:0 2px 6px rgba(0,0,0,.1);}
+  .kcard .jn{font-weight:700;font-size:12.5px;color:var(--navy);}
+  .kcard .cn{font-size:12.5px;margin-top:3px;}
+  .kcard .dv{font-size:11.5px;color:var(--muted);margin-top:2px;}
+
+  .pill-tabs{display:flex;gap:6px;margin-bottom:16px;}
+  .pill-tabs button{
+    padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:#fff;font-size:12.5px;
+    cursor:pointer;color:var(--muted);font-weight:600;
+  }
+  .pill-tabs button.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+  .link{color:var(--info);cursor:pointer;text-decoration:none;}
+  .link:hover{text-decoration:underline;}
+  .icon-btn{background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;padding:4px 6px;}
+  .icon-btn:hover{color:var(--navy);}
+  .timeline{border-left:2px solid var(--border);margin-left:6px;padding-left:16px;}
+  .timeline-item{margin-bottom:12px;position:relative;}
+  .timeline-item::before{content:'';position:absolute;left:-21px;top:4px;width:9px;height:9px;border-radius:50%;background:var(--amber);}
+  .timeline-item .t{font-size:11.5px;color:var(--muted);}
+  .money{font-weight:700;}
+  .hint{font-size:12px;color:var(--muted);margin-top:4px;}
+
+  /* Print Styles */
+  @media print {
+    body * { visibility: hidden; }
+    #printContainer, #printContainer * { visibility: visible; }
+    #printContainer { position: absolute; left: 0; top: 0; width: 100%; font-family: Arial, sans-serif; color: #000; }
+    .print-header { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; }
+    .print-title { font-size: 22px; font-weight: bold; }
+    .print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    .print-section { border: 1px solid #ccc; padding: 10px; border-radius: 4px; }
+    .print-section h4 { margin: 0 0 8px 0; border-bottom: 1px solid #eee; padding-bottom: 4px; font-size: 13px; text-transform: uppercase; color: #444; }
+    .print-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .print-table th, .print-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    .print-table th { background-color: #f5f5f5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .print-footer { margin-top: 50px; text-align: center; font-size: 12px; border-top: 1px solid #ddd; padding-top: 10px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <div class="brand"><span class="dot"></span> ServiceDesk</div>
+    <nav id="navMenu"></nav>
+    <div class="footer">
+      All data stored locally<br>on this computer.
+      <div style="margin-top:10px; display:flex; gap:5px;">
+        <button class="btn sm ghost" style="color:#fff; border-color:rgba(255,255,255,0.2); padding:3px 6px;" onclick="exportDatabase()">📥 Backup</button>
+        <button class="btn sm ghost" style="color:#fff; border-color:rgba(255,255,255,0.2); padding:3px 6px;" onclick="document.getElementById('importFile').click()">📤 Restore</button>
+      </div>
+      <input type="file" id="importFile" style="display:none;" accept=".json" onchange="importDatabase(event)">
+    </div>
+  </div>
+  <div id="main">
+    <div id="topbar">
+      <div>
+        <h1 id="pageTitle">Dashboard</h1>
+        <div class="sub" id="pageSub">Overview of your service business</div>
+      </div>
+      
+      <div class="search-container">
+        <span class="search-icon-label">&#128269;</span>
+        <input type="text" class="global-search-input" id="globalSearchInput" placeholder="Search customer name or mobile..." oninput="handleGlobalSearch(this.value)">
+        <div class="search-results-dropdown" id="globalSearchResults"></div>
+      </div>
+
+      <div id="topbarActions"></div>
+    </div>
+    <div id="content"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modalBox"></div>
+</div>
+
+<div class="sub-overlay" id="subOverlay">
+  <div class="modal" id="subModalBox" style="max-width: 480px; box-shadow: 0 5px 25px rgba(0,0,0,0.3);"></div>
+</div>
+
+<div id="printContainer"></div>
+
+<script>
+const SUPABASE_URL = "https://lohewqpdvwhbqqkinlbh.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_6-7H2Ua7ll48trvOz2h7JQ_SEUtFqTg";
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ---------------- CLOUD DATA LAYER ---------------- */
+let DB = {};
+
+async function loadDB() {
+  try {
+    const { data, error } = await supabase
+      .from('service_desk_data')
+      .select('payload')
+      .eq('db_name', 'primary_business')
+      .single();
+
+    if (error) throw error;
+    DB = data.payload;
+    
+    // Trigger your application UI refresh
+    renderNav();
+    renderPage();
+  } catch (err) {
+    console.error("Error loading cloud database:", err.message);
+    alert("Could not load data from cloud database.");
+  }
+}
+
+async function saveDB() {
+  try {
+    const { error } = await supabase
+      .from('service_desk_data')
+      .update({ payload: DB, updated_at: new Date() })
+      .eq('db_name', 'primary_business');
+
+    if (error) throw error;
+  } catch (err) {
+    console.error("Error updating cloud database:", err.message);
+  }
+}
+function nextId(kind){
+  DB.counters[kind] = (DB.counters[kind]||0) + 1;
+  saveDB();
+  return DB.counters[kind];
+}
+function fmtDate(iso){
+  if(!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+}
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function money(n){ return '₹' + Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+const STATUS_LIST = [
+  {key:'Received', cls:'received'},
+  {key:'In Diagnosis', cls:'diagnosis'},
+  {key:'Awaiting Approval', cls:'approval'},
+  {key:'In Repair', cls:'repair'},
+  {key:'Ready for Pickup', cls:'ready'},
+  {key:'Delivered', cls:'delivered'},
+  {key:'Cancelled', cls:'cancelled'},
+];
+function statusClass(s){ const f=STATUS_LIST.find(x=>x.key===s); return f?f.cls:'received'; }
+
+/* ---------------- GLOBAL SEARCH HANDLER ---------------- */
+function handleGlobalSearch(val) {
+  const dropdown = document.getElementById('globalSearchResults');
+  const cleanVal = val.trim().toLowerCase();
+  
+  if (!cleanVal) {
+    dropdown.innerHTML = '';
+    dropdown.classList.remove('show');
+    return;
+  }
+
+  const matches = DB.customers.filter(c => 
+    c.name.toLowerCase().includes(cleanVal) || 
+    c.phone.toLowerCase().includes(cleanVal)
+  );
+
+  if (matches.length === 0) {
+    dropdown.innerHTML = `<div style="padding: 12px; color: var(--muted); text-align: center;">No matching customers found</div>`;
+    dropdown.classList.add('show');
+    return;
+  }
+
+  dropdown.innerHTML = matches.map(c => {
+    const jobCount = DB.jobs.filter(j => j.customerId === c.id).length;
+    const deviceCount = DB.devices.filter(d => d.customerId === c.id).length;
+    return `
+      <div class="search-row" onclick="selectGlobalCustomer(${c.id})">
+        <div class="name">${c.name}</div>
+        <div class="meta">
+          <span>📞 ${c.phone}</span>
+          <span>📂 History: ${jobCount} Jobs (${deviceCount} Dev)</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+  dropdown.classList.add('show');
+}
+
+function selectGlobalCustomer(id) {
+  document.getElementById('globalSearchInput').value = '';
+  document.getElementById('globalSearchResults').classList.remove('show');
+  viewCustomer(id);
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-container')) {
+    document.getElementById('globalSearchResults').classList.remove('show');
+  }
+});
+
+/* ---------------- BACKUP & RESTORE ACTIONS ---------------- */
+function exportDatabase(){
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB, null, 2));
+  const downloadAnchor = document.createElement('a');
+  downloadAnchor.setAttribute("href", dataStr);
+  downloadAnchor.setAttribute("download", `ServiceDesk_Backup_${new Date().toISOString().slice(0,10)}.json`);
+  document.body.appendChild(downloadAnchor);
+  downloadAnchor.click();
+  downloadAnchor.remove();
+}
+
+function importDatabase(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (parsed.jobs && parsed.customers && parsed.devices && parsed.counters) {
+        if(confirm("Are you sure you want to restore this file? It will completely overwrite your current local database data.")) {
+          localStorage.setItem(DB_KEY, JSON.stringify(parsed));
+          DB = loadDB();
+          renderPage();
+          alert("Database successfully restored!");
+        }
+      } else {
+        alert("Invalid backup file layout format detected.");
+      }
+    } catch (err) {
+      alert("Error parsing backup data file.");
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = ''; 
+}
+
+function exportExcelReport() {
+  if (!DB.jobs || DB.jobs.length === 0) {
+    alert("No job records found to export into a report.");
+    return;
+  }
+  
+  const headers = ["Job Number", "Customer Name", "Mobile Number", "Device Type", "Brand/Model", "Serial Number", "Work Status", "Date Received"];
+  
+  const rows = DB.jobs.map(j => {
+    const cust = DB.customers.find(x => x.id === j.customerId);
+    const dev = DB.devices.find(x => x.id === j.deviceId);
+    
+    return [
+      `#${j.jobNumber || j.id}`,
+      cust ? cust.name : "—",
+      cust ? cust.phone : "—",
+      dev ? dev.type : "—",
+      dev ? `${dev.brand} ${dev.model}` : "—",
+      dev && dev.serialNumber ? dev.serialNumber : "n/a",
+      j.status || "—",
+      j.receivedDate || "—"
+    ];
+  });
+  
+  const csvContent = [
+    headers.join(","),
+    ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
+  ].join("\r\n");
+  
+  const BOM = "\uFEFF";
+  const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  
+  const downloadAnchor = document.createElement('a');
+  downloadAnchor.setAttribute("href", url);
+  downloadAnchor.setAttribute("download", `QMACS_Service_Report_${new Date().toISOString().slice(0,10)}.csv`);
+  document.body.appendChild(downloadAnchor);
+  downloadAnchor.click();
+  downloadAnchor.remove();
+}
+
+/* ---------------- PRINT ACTION ---------------- */
+function triggerPrintJob(jobId) {
+  const j = DB.jobs.find(x=>x.id===jobId);
+  const cust = DB.customers.find(x=>x.id===j.customerId);
+  const dev = DB.devices.find(x=>x.id===j.deviceId);
+  const tech = DB.technicians.find(x=>x.id===j.technicianId);
+
+  const printHtml = `
+    <div class="print-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div style="display: flex; gap: 15px; align-items: flex-start;">
+        <div style="width:75px;height:75px;background:#0F1F3D;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;border-radius:4px;">QMACS</div>
+        <div>
+          <div class="print-title">QMACS IT SOLUTIONS</div>
+          <div style="font-size: 11px; color: #444; margin-top: 3px; max-width: 320px; line-height: 1.3;">
+            B P COMPLEX, EAST ROAD, KOYILANDY,<br>KOZHIKODE, KERALA-673305
+          </div>
+          <div style="font-size: 13px; font-weight: 600; margin-top: 8px; color: #0F1F3D;">Computer Service Receipt</div>
+        </div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-weight: bold; font-size: 16px;">JOB ORDER: #${j.jobNumber}</div>
+        <div>Date: ${fmtDate(j.receivedDate)}</div>
+        <div>Status: <strong>${j.status}</strong></div>
+      </div>
+    </div>
+    
+    <div class="print-grid">
+      <div class="print-section">
+        <h4>Customer Details</h4>
+        <strong>Name:</strong> ${cust ? cust.name : '—'}<br>
+        <strong>Phone:</strong> ${cust ? cust.phone : '—'}<br>
+        <strong>Email:</strong> ${cust && cust.email ? cust.email : '—'}<br>
+        <strong>Address:</strong> ${cust && cust.address ? cust.address : '—'}
+      </div>
+      <div class="print-section">
+        <h4>Device Details</h4>
+        <strong>Device Type:</strong> ${dev ? dev.type : '—'}<br>
+        <strong>Brand/Model:</strong> ${dev ? `${dev.brand} ${dev.model}` : '—'}<br>
+        <strong>Serial Number:</strong> ${dev && dev.serialNumber ? dev.serialNumber : 'n/a'}<br>
+        <strong>Assigned Tech:</strong> ${tech ? tech.name : 'Unassigned'}
+      </div>
+    </div>
+
+    <table class="print-table">
+      <thead>
+        <tr>
+          <th style="width: 70%;">Service Description / Issue Reported</th>
+          <th style="width: 30%; text-align: right;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <strong>Issue Reported:</strong> ${j.issueReported || '—'}<br><br>
+            <strong>Inspection/Diagnosis Findings:</strong> ${j.inspectionDetails || 'No findings recorded.'}
+          </td>
+          <td style="text-align: right; vertical-align: top;">
+            <div>Estimated: ${j.estimateAmount ? money(j.estimateAmount) : '—'}</div>
+            <div style="margin-top: 15px; font-weight: bold; font-size: 15px;">Final: ${j.finalAmount ? money(j.finalAmount) : money(j.estimateAmount||0)}</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    ${j.notes ? `<div style="margin-top: 20px;" class="print-section"><h4>Additional Operational Notes</h4>${j.notes}</div>` : ''}
+
+    <div class="print-footer">
+      <p>Thank you for choosing QMACS IT SOLUTIONS for your service needs!</p>
+      <p style="margin-top: 30px; font-size: 10px; color: #666;">Generated on ${new Date().toLocaleString()}</p>
+    </div>
+  `;
+  
+  document.getElementById('printContainer').innerHTML = printHtml;
+  window.print();
+}
+
+/* ---------------- NESTED QUICK ADD POPUPS ---------------- */
+function openQuickCustomerModal() {
+  document.getElementById('subModalBox').innerHTML = `
+    <div class="modal-head"><h2>Quick Add Customer</h2><button class="close-x" onclick="closeSubModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Full Name *</label><input type="text" id="q_name"></div>
+      <div class="field"><label>Phone *</label><input type="text" id="q_phone"></div>
+      <div class="field"><label>Email</label><input type="text" id="q_email"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost sm" onclick="closeSubModal()">Cancel</button>
+      <button class="btn amber sm" onclick="saveQuickCustomer()">Save Customer</button>
+    </div>
+  `;
+  document.getElementById('subOverlay').classList.add('show');
+}
+
+function saveQuickCustomer() {
+  const name = document.getElementById('q_name').value.trim();
+  const phone = document.getElementById('q_phone').value.trim();
+  if(!name || !phone){ alert('Name and phone are required.'); return; }
+  
+  const data = {
+    id: nextId('customer'),
+    name, phone,
+    email: document.getElementById('q_email').value.trim(),
+    address: '', notes: '', createdAt: todayISO()
+  };
+  
+  DB.customers.push(data);
+  saveDB();
+  closeSubModal();
+  
+  const selectCust = document.getElementById('f_jcust');
+  if (selectCust) {
+    selectCust.innerHTML = customerOptions(data.id);
+    onJobCustomerChange();
+  }
+}
+
+function openQuickDeviceModal() {
+  const custId = Number(document.getElementById('f_jcust').value);
+  if (!custId) { alert('Please select or add a customer first before registering a brand new device.'); return; }
+  
+  document.getElementById('subModalBox').innerHTML = `
+    <div class="modal-head"><h2>Quick Add Device</h2><button class="close-x" onclick="closeSubModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Device Type *</label><select id="q_type">
+        ${['Laptop','Desktop PC','Printer','Monitor','Server','Networking Equipment','Other'].map(t=>`<option>${t}</option>`).join('')}
+      </select></div>
+      <div class="field"><label>Brand *</label><input type="text" id="q_brand"></div>
+      <div class="field"><label>Model</label><input type="text" id="q_model"></div>
+      <div class="field"><label>Serial Number</label><input type="text" id="q_serial"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost sm" onclick="closeSubModal()">Cancel</button>
+      <button class="btn amber sm" onclick="saveQuickDevice(${custId})">Save Device</button>
+    </div>
+  `;
+  document.getElementById('subOverlay').classList.add('show');
+}
+
+function saveQuickDevice(customerId) {
+  const brand = document.getElementById('q_brand').value.trim();
+  if(!brand){ alert('Device brand name is required.'); return; }
+  
+  const data = {
+    id: nextId('device'),
+    customerId,
+    type: document.getElementById('q_type').value,
+    brand,
+    model: document.getElementById('q_model').value.trim(),
+    serialNumber: document.getElementById('q_serial').value.trim(),
+    notes: ''
+  };
+  
+  DB.devices.push(data);
+  saveDB();
+  closeSubModal();
+  
+  const selectDev = document.getElementById('f_jdevice');
+  if (selectDev) {
+    selectDev.innerHTML = deviceOptionsForCustomer(customerId, data.id);
+  }
+}
+
+function closeSubModal() {
+  document.getElementById('subOverlay').classList.remove('show');
+  document.getElementById('subModalBox').innerHTML = '';
+}
+
+/* ---------------- NAVIGATION ---------------- */
+const PAGES = [
+  {key:'dashboard', label:'Dashboard', icon:'&#9632;'},
+  {key:'jobs', label:'Job Orders', icon:'&#128295;'},
+  {key:'board', label:'Job Board', icon:'&#128203;'},
+  {key:'customers', label:'Customers', icon:'&#128100;'},
+  {key:'devices', label:'Devices', icon:'&#128187;'},
+  {key:'technicians', label:'Technicians', icon:'&#128119;'},
+];
+let currentPage = 'dashboard';
+
+function renderNav(){
+  const nav = document.getElementById('navMenu');
+  nav.innerHTML = PAGES.map(p => `
+    <div class="nav-item ${p.key===currentPage?'active':''}" onclick="goTo('${p.key}')">
+      <span class="icon">${p.icon}</span><span>${p.label}</span>
+    </div>`).join('');
+}
+function goTo(page){
+  currentPage = page;
+  renderNav();
+  renderPage();
+}
+
+function setTopbar(title, sub, actionsHtml){
+  document.getElementById('pageTitle').textContent = title;
+  document.getElementById('pageSub').textContent = sub || '';
+  document.getElementById('topbarActions').innerHTML = actionsHtml || '';
+}
+
+function renderPage(){
+  const c = document.getElementById('content');
+  if(currentPage==='dashboard') return renderDashboard(c);
+  if(currentPage==='jobs') return renderJobs(c);
+  if(currentPage==='board') return renderBoard(c);
+  if(currentPage==='customers') return renderCustomers(c);
+  if(currentPage==='devices') return renderDevices(c);
+  if(currentPage==='technicians') return renderTechnicians(c);
+}
+
+/* ---------------- MODAL HELPERS ---------------- */
+function openModal(html){
+  document.getElementById('modalBox').innerHTML = html;
+  document.getElementById('overlay').classList.add('show');
+}
+function closeModal(){
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('modalBox').innerHTML = '';
+}
+document.getElementById('overlay').addEventListener('click', e=>{
+  if(e.target.id==='overlay') closeModal();
+});
+
+/* ---------------- DASHBOARD ---------------- */
+function renderDashboard(c){
+  setTopbar('Dashboard','Overview of your service business','');
+  const openJobs = DB.jobs.filter(j=>!['Delivered','Cancelled'].includes(j.status));
+  const readyCount = DB.jobs.filter(j=>j.status==='Ready for Pickup').length;
+  const pendingApproval = DB.jobs.filter(j=>j.status==='Awaiting Approval').length;
+  const totalRevenue = DB.jobs.filter(j=>j.status==='Delivered').reduce((s,j)=>s+Number(j.finalAmount||j.estimateAmount||0),0);
+
+  const recentJobs = [...DB.jobs].sort((a,b)=> new Date(b.receivedDate)-new Date(a.receivedDate)).slice(0,6);
+
+  c.innerHTML = `
+    <div class="grid cols-4" style="margin-bottom:20px;">
+      <div class="card stat"><div class="num">${DB.customers.length}</div><div class="label">Total Customers</div></div>
+      <div class="card stat"><div class="num">${openJobs.length}</div><div class="label">Open Job Orders</div></div>
+      <div class="card stat"><div class="num">${pendingApproval}</div><div class="label">Awaiting Approval</div></div>
+      <div class="card stat"><div class="num">${readyCount}</div><div class="label">Ready for Pickup</div></div>
+    </div>
+    <div class="grid cols-2">
+      <div class="card">
+        <h3 style="margin-top:0;">Recent Job Orders</h3>
+        ${recentJobs.length ? `
+        <table>
+          <tr><th>Job#</th><th>Customer</th><th>Status</th><th>Received</th></tr>
+          ${recentJobs.map(j=>{
+            const cust = DB.customers.find(x=>x.id===j.customerId);
+            return `<tr style="cursor:pointer" onclick="viewJob(${j.id})">
+              <td><strong>#${j.jobNumber}</strong></td>
+              <td>${cust?cust.name:'—'}</td>
+              <td><span class="badge ${statusClass(j.status)}">${j.status}</span></td>
+              <td>${fmtDate(j.receivedDate)}</td>
+            </tr>`;
+          }).join('')}
+        </table>` : `<div class="empty"><div class="big">🗂️</div>No job orders yet.</div>`}
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0;">Lifetime Revenue (Delivered Jobs)</h3>
+        <div style="font-size:32px;font-weight:800;color:var(--navy);margin:10px 0;">${money(totalRevenue)}</div>
+        <div class="hint">Sum of final amounts for jobs marked Delivered.</div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">
+        <h3 style="margin:0 0 10px;">Quick Actions</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn amber" onclick="goTo('jobs');setTimeout(openJobForm,0)">+ New Job Order</button>
+          <button class="btn ghost" onclick="goTo('customers');setTimeout(openCustomerForm,0)">+ New Customer</button>
+          <button class="btn ghost" onclick="exportExcelReport()">📊 Export Excel Report</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ---------------- CUSTOMERS ---------------- */
+let customerSearch = '';
+function renderCustomers(c){
+  setTopbar('Customers','Manage your customer records', `<button class="btn amber" onclick="openCustomerForm()">+ New Customer</button>`);
+  const filtered = DB.customers.filter(cu =>
+    (cu.name+cu.phone+(cu.email||'')).toLowerCase().includes(customerSearch.toLowerCase())
+  );
+  c.innerHTML = `
+    <div class="toolbar">
+      <input class="search" placeholder="Search customers..." value="${customerSearch}" oninput="customerSearch=this.value;renderCustomers(document.getElementById('content'))">
+      <div class="hint">${DB.customers.length} total</div>
+    </div>
+    <div class="table-wrap">
+      ${filtered.length ? `
+      <table>
+        <tr><th>Name</th><th>Phone</th><th>Email</th><th>Devices</th><th>Jobs</th><th></th></tr>
+        ${filtered.map(cu=>{
+          const devCount = DB.devices.filter(d=>d.customerId===cu.id).length;
+          const jobCount = DB.jobs.filter(j=>j.customerId===cu.id).length;
+          return `<tr>
+            <td><a class="link" onclick="viewCustomer(${cu.id})">${cu.name}</a></td>
+            <td>${cu.phone||'—'}</td>
+            <td>${cu.email||'—'}</td>
+            <td>${devCount}</td>
+            <td>${jobCount}</td>
+            <td style="text-align:right;">
+              <button class="icon-btn" onclick="openCustomerForm(${cu.id})">✎</button>
+              <button class="icon-btn" onclick="deleteCustomer(${cu.id})">🗑</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </table>` : `<div class="empty"><div class="big">👤</div>No customers yet. Click "New Customer" to add one.</div>`}
+    </div>
+  `;
+}
+function openCustomerForm(id){
+  const editing = id ? DB.customers.find(x=>x.id===id) : null;
+  openModal(`
+    <div class="modal-head"><h2>${editing?'Edit Customer':'New Customer'}</h2><button class="close-x" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Full Name *</label><input type="text" id="f_name" value="${editing?editing.name:''}"></div>
+      <div class="grid cols-2">
+        <div class="field"><label>Phone *</label><input type="text" id="f_phone" value="${editing?editing.phone:''}"></div>
+        <div class="field"><label>Email</label><input type="text" id="f_email" value="${editing?editing.email||'':''}"></div>
+      </div>
+      <div class="field"><label>Address</label><textarea id="f_address">${editing?editing.address||'':''}</textarea></div>
+      <div class="field"><label>Notes</label><textarea id="f_notes">${editing?editing.notes||'':''}</textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn amber" onclick="saveCustomer(${editing?editing.id:'null'})">Save Customer</button>
+    </div>
+  `);
+}
+async function saveCustomer(id){
+  const name = document.getElementById('f_name').value.trim();
+  const phone = document.getElementById('f_phone').value.trim();
+  if(!name || !phone){ alert('Name and phone are required.'); return; }
+  const data = {
+    name, phone,
+    email: document.getElementById('f_email').value.trim(),
+    address: document.getElementById('f_address').value.trim(),
+    notes: document.getElementById('f_notes').value.trim(),
+  };
+  if(id){
+    Object.assign(DB.customers.find(x=>x.id===id), data);
+  } else {
+    data.id = nextId('customer');
+    data.createdAt = todayISO();
+    DB.customers.push(data);
+  }
+  
+  // Wait for the cloud to sync before updating the screen
+  await saveDB(); 
+  closeModal(); 
+  renderCustomers(document.getElementById('content'));
+}
+  saveDB(); closeModal(); renderCustomers(document.getElementById('content'));
+}
+function deleteCustomer(id){
+  const hasJobs = DB.jobs.some(j=>j.customerId===id);
+  if(hasJobs){ alert('Cannot delete: this customer has job orders on record.'); return; }
+  if(!confirm('Delete this customer and their devices?')) return;
+  DB.customers = DB.customers.filter(x=>x.id!==id);
+  DB.devices = DB.devices.filter(x=>x.customerId!==id);
+  saveDB(); renderCustomers(document.getElementById('content'));
+}
+function viewCustomer(id){
+  const cu = DB.customers.find(x=>x.id===id);
+  if(!cu) return;
+  const devices = DB.devices.filter(d=>d.customerId===id);
+  const jobs = DB.jobs.filter(j=>j.customerId===id);
+  openModal(`
+    <div class="modal-head"><h2>${cu.name}</h2><button class="close-x" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <p><strong>Phone:</strong> ${cu.phone||'—'} &nbsp; | &nbsp; <strong>Email:</strong> ${cu.email||'—'}</p>
+      <p><strong>Address:</strong> ${cu.address||'—'}</p>
+      ${cu.notes?`<p><strong>Notes:</strong> ${cu.notes}</p>`:''}
+      <hr style="border:none;border-top:1px solid var(--border);">
+      <h3>Devices (${devices.length})</h3>
+      ${devices.length? devices.map(d=>`<div class="hint">• ${d.type} — ${d.brand} ${d.model} (S/N: ${d.serialNumber||'n/a'})</div>`).join('') : '<div class="hint">No devices on record.</div>'}
+      <h3 style="margin-top:16px;">Job History (${jobs.length})</h3>
+      ${jobs.length? `<table><tr><th>Job#</th><th>Status</th><th>Date</th></tr>${jobs.map(j=>`<tr style="cursor:pointer" onclick="closeModal();viewJob(${j.id})"><td>#${j.jobNumber}</td><td><span class="badge ${statusClass(j.status)}">${j.status}</span></td><td>${fmtDate(j.receivedDate)}</td></tr>`).join('')}</table>` : '<div class="hint">No jobs yet.</div>'}
+    </div>
+    <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">Close</button></div>
+  `);
+}
+
+/* ---------------- DEVICES ---------------- */
+let deviceSearch = '';
+function renderDevices(c){
+  setTopbar('Devices','All customer devices on record', `<button class="btn amber" onclick="openDeviceForm()">+ New Device</button>`);
+  const filtered = DB.devices.filter(d=>(d.type+d.brand+d.model+(d.serialNumber||'')).toLowerCase().includes(deviceSearch.toLowerCase()));
+  c.innerHTML = `
+    <div class="toolbar">
+      <input class="search" placeholder="Search devices..." value="${deviceSearch}" oninput="deviceSearch=this.value;renderDevices(document.getElementById('content'))">
+      <div class="hint">${DB.devices.length} total</div>
+    </div>
+    <div class="table-wrap">
+      ${filtered.length ? `
+      <table>
+        <tr><th>Type</th><th>Brand / Model</th><th>Serial No.</th><th>Owner</th><th></th></tr>
+        ${filtered.map(d=>{
+          const cu = DB.customers.find(x=>x.id===d.customerId);
+          return `<tr>
+            <td>${d.type}</td><td>${d.brand} ${d.model}</td><td>${d.serialNumber||'—'}</td>
+            <td>${cu?`<a class="link" onclick="viewCustomer(${cu.id})">${cu.name}</a>`:'—'}</td>
+            <td style="text-align:right;">
+              <button class="icon-btn" onclick="openDeviceForm(${d.id})">✎</button>
+              <button class="icon-btn" onclick="deleteDevice(${d.id})">🗑</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </table>` : `<div class="empty"><div class="big">💻</div>No devices yet.</div>`}
+    </div>
+  `;
+}
+function customerOptions(selectedId){
+  if(!DB.customers.length) return `<option value="">— add a customer first —</option>`;
+  return DB.customers.map(cu=>`<option value="${cu.id}" ${selectedId===cu.id?'selected':''}>${cu.name} (${cu.phone})</option>`).join('');
+}
+function openDeviceForm(id){
+  const editing = id ? DB.devices.find(x=>x.id===id) : null;
+  if(!DB.customers.length && !editing){ alert('Add a customer first before registering a device.'); return; }
+  openModal(`
+    <div class="modal-head"><h2>${editing?'Edit Device':'New Device'}</h2><button class="close-x" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Owner (Customer) *</label><select id="f_cust">${customerOptions(editing?editing.customerId:null)}</select></div>
+      <div class="grid cols-2">
+        <div class="field"><label>Device Type *</label><select id="f_type">
+          ${['Laptop','Desktop PC','Printer','Monitor','Server','Networking Equipment','Other'].map(t=>`<option ${editing&&editing.type===t?'selected':''}>${t}</option>`).join('')}
+        </select></div>
+        <div class="field"><label>Serial Number</label><input type="text" id="f_serial" value="${editing?editing.serialNumber||'':''}"></div>
+      </div>
+      <div class="grid cols-2">
+        <div class="field"><label>Brand *</label><input type="text" id="f_brand" value="${editing?editing.brand:''}"></div>
+        <div class="field"><label>Model</label><input type="text" id="f_model" value="${editing?editing.model||'':''}"></div>
+      </div>
+      <div class="field"><label>Notes (accessories, condition, etc.)</label><textarea id="f_devnotes">${editing?editing.notes||'':''}</textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn amber" onclick="saveDevice(${editing?editing.id:'null'})">Save Device</button>
+    </div>
+  `);
+}
+async function saveDevice(id){
+  const customerId = Number(document.getElementById('f_cust').value);
+  const brand = document.getElementById('f_brand').value.trim();
+  if(!customerId || !brand){ alert('Owner and brand are required.'); return; }
+  const data = {
+    customerId,
+    type: document.getElementById('f_type').value,
+    brand,
+    model: document.getElementById('f_model').value.trim(),
+    serialNumber: document.getElementById('f_serial').value.trim(),
+    notes: document.getElementById('f_devnotes').value.trim(),
+  };
+  if(id){
+    Object.assign(DB.devices.find(x=>x.id===id), data);
+  } else {
+    data.id = nextId('device');
+    DB.devices.push(data);
+  }
+  
+  // Wait for the cloud to sync before updating the screen
+  await saveDB(); 
+  closeModal(); 
+  renderDevices(document.getElementById('content'));
+}
+  saveDB(); closeModal(); renderDevices(document.getElementById('content'));
+}
+function deleteDevice(id){
+  const hasJobs = DB.jobs.some(j=>j.deviceId===id);
+  if(hasJobs){ alert('Cannot delete: this device has job orders on record.'); return; }
+  if(!confirm('Delete this device?')) return;
+  DB.devices = DB.devices.filter(x=>x.id!==id);
+  saveDB(); renderDevices(document.getElementById('content'));
+}
+
+/* ---------------- RENDERING TECHNICIANS ---------------- */
+function renderTechnicians(c){
+  setTopbar('Technicians','Your service team', `<button class="btn amber" onclick="openTechForm()">+ New Technician</button>`);
+  c.innerHTML = `
+    <div class="grid cols-3">
+      ${DB.technicians.map(t=>{
+        const activeJobs = DB.jobs.filter(j=>j.technicianId===t.id && !['Delivered','Cancelled'].includes(j.status)).length;
+        return `<div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <h3 style="margin:0 0 4px;">${t.name}</h3>
+              <div class="hint">${t.specialty||'General Technician'}</div>
+              <div class="hint">${t.phone||''}</div>
+            </div>
+            <div style="text-align:right;">
+              <button class="icon-btn" onclick="openTechForm(${t.id})">✎</button>
+              <button class="icon-btn" onclick="deleteTech(${t.id})">🗑</button>
+            </div>
+          </div>
+          <div style="margin-top:12px;"><span class="badge diagnosis">${activeJobs} active job${activeJobs!==1?'s':''}</span></div>
+        </div>`;
+      }).join('') || `<div class="empty" style="grid-column:1/-1;"><div class="big">🧑‍🔧</div>No technicians added yet.</div>`}
+    </div>
+  `;
+}
+function openTechForm(id){
+  const editing = id ? DB.technicians.find(x=>x.id===id) : null;
+  openModal(`
+    <div class="modal-head"><h2>${editing?'Edit Technician':'New Technician'}</h2><button class="close-x" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Name *</label><input type="text" id="f_tname" value="${editing?editing.name:''}"></div>
+      <div class="field"><label>Phone</label><input type="text" id="f_tphone" value="${editing?editing.phone||'':''}"></div>
+      <div class="field"><label>Specialty</label><input type="text" id="f_tspec" placeholder="e.g. Hardware, Networking, Data Recovery" value="${editing?editing.specialty||'':''}"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn amber" onclick="saveTech(${editing?editing.id:'null'})">Save</button>
+    </div>
+  `);
+}
+function saveTech(id){
+  const name = document.getElementById('f_tname').value.trim();
+  if(!name){ alert('Name is required.'); return; }
+  const data = {
+    name,
+    phone: document.getElementById('f_tphone').value.trim(),
+    specialty: document.getElementById('f_tspec').value.trim(),
+  };
+  if(id){ Object.assign(DB.technicians.find(x=>x.id===id), data); }
+  else { data.id = nextId('tech'); DB.technicians.push(data); }
+  saveDB(); closeModal(); renderTechnicians(document.getElementById('content'));
+}
+function deleteTech(id){
+  if(!confirm('Delete this technician? Their assigned jobs will be unassigned.')) return;
+  DB.technicians = DB.technicians.filter(x=>x.id!==id);
+  DB.jobs.forEach(j=>{ if(j.technicianId===id) j.technicianId=null; });
+  saveDB(); renderTechnicians(document.getElementById('content'));
+}
+
+/* ---------------- JOB ORDERS ---------------- */
+let jobStatusFilter = 'All';
+let jobSearch = '';
+function renderJobs(c){
+  setTopbar('Job Orders','Track every repair from intake to delivery', `
+    <button class="btn ghost" style="margin-right:4px;" onclick="exportExcelReport()">📊 Export Excel</button>
+    <button class="btn amber" onclick="openJobForm()">+ New Job Order</button>
+  `);
+  const tabs = ['All', ...STATUS_LIST.map(s=>s.key)];
+  let filtered = DB.jobs.filter(j=>{
+    const cust = DB.customers.find(x=>x.id===j.customerId);
+    const matchesSearch = ((cust?cust.name:'')+j.jobNumber+j.issueReported).toLowerCase().includes(jobSearch.toLowerCase());
+    const matchesStatus = jobStatusFilter==='All' || j.status===jobStatusFilter;
+    return matchesSearch && matchesStatus;
+  }).sort((a,b)=> new Date(b.receivedDate)-new Date(a.receivedDate));
+
+  c.innerHTML = `
+    <div class="pill-tabs">
+      ${tabs.map(t=>`<button class="${jobStatusFilter===t?'active':''}" onclick="jobStatusFilter='${t}';renderJobs(document.getElementById('content'))">${t}</button>`).join('')}
+    </div>
+    <div class="toolbar">
+      <input class="search" placeholder="Search job#, customer, issue..." value="${jobSearch}" oninput="jobSearch=this.value;renderJobs(document.getElementById('content'))">
+      <div class="hint">${filtered.length} job${filtered.length!==1?'s':''}</div>
+    </div>
+    <div class="table-wrap">
+      ${filtered.length ? `
+      <table>
+        <tr><th>Job#</th><th>Customer</th><th>Device</th><th>Technician</th><th>Status</th><th>Estimate</th><th>Received</th><th></th></tr>
+        ${filtered.map(j=>{
+          const cust = DB.customers.find(x=>x.id===j.customerId);
+          const dev = DB.devices.find(x=>x.id===j.deviceId);
+          const tech = DB.technicians.find(x=>x.id===j.technicianId);
+          return `<tr>
+            <td><a class="link" onclick="viewJob(${j.id})"><strong>#${j.jobNumber}</strong></a></td>
+            <td>${cust?cust.name:'—'}</td>
+            <td>${dev?`${dev.brand} ${dev.model}`:'—'}</td>
+            <td>${tech?tech.name:'<span class="hint">Unassigned</span>'}</td>
+            <td><span class="badge ${statusClass(j.status)}">${j.status}</span></td>
+            <td>${j.estimateAmount?money(j.estimateAmount):'—'}</td>
+            <td>${fmtDate(j.receivedDate)}</td>
+            <td style="text-align:right;">
+              <button class="icon-btn" onclick="openJobForm(${j.id})">✎</button>
+              <button class="icon-btn" onclick="deleteJob(${j.id})">🗑</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </table>` : `<div class="empty"><div class="big">🧰</div>No job orders match. Click "New Job Order" to create one.</div>`}
+    </div>
+  `;
+}
+function deviceOptionsForCustomer(customerId, selectedId){
+  const devs = DB.devices.filter(d=>d.customerId===customerId);
+  if(!devs.length) return `<option value="">— no devices for this customer —</option>`;
+  return devs.map(d=>`<option value="${d.id}" ${selectedId===d.id?'selected':''}>${d.type} — ${d.brand} ${d.model}</option>`).join('');
+}
+function onJobCustomerChange(){
+  const custId = Number(document.getElementById('f_jcust').value);
+  document.getElementById('f_jdevice').innerHTML = deviceOptionsForCustomer(custId, null);
+}
+function techOptions(selectedId){
+  const opts = `<option value="">Unassigned</option>` + DB.technicians.map(t=>`<option value="${t.id}" ${selectedId===t.id?'selected':''}>${t.name}</option>`).join('');
+  return opts;
+}
+function statusOptions(selected){
+  return STATUS_LIST.map(s=>`<option ${selected===s.key?'selected':''}>${s.key}</option>`).join('');
+}
+function openJobForm(id){
+  const editing = id ? DB.jobs.find(x=>x.id===id) : null;
+  openModal(`
+    <div class="modal-head"><h2>${editing?'Edit Job Order #'+editing.jobNumber:'New Job Order'}</h2><button class="close-x" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="grid cols-2">
+        <div class="field">
+          <label>Customer *</label>
+          <div style="display:flex; gap:6px;">
+            <select id="f_jcust" onchange="onJobCustomerChange()">${customerOptions(editing?editing.customerId:null)}</select>
+            ${!editing ? `<button class="btn amber sm" style="white-space:nowrap; padding:0 8px;" onclick="openQuickCustomerModal()">+ Add New</button>` : ''}
+          </div>
+        </div>
+        <div class="field">
+          <label>Device *</label>
+          <div style="display:flex; gap:6px;">
+            <select id="f_jdevice">${deviceOptionsForCustomer(editing?editing.customerId:Number(DB.customers[0]?.id), editing?editing.deviceId:null)}</select>
+            ${!editing ? `<button class="btn amber sm" style="white-space:nowrap; padding:0 8px;" onclick="openQuickDeviceModal()">+ Add New</button>` : ''}
+          </div>
+        </div>
+      </div>
+      <div class="grid cols-2">
+        <div class="field"><label>Assign Technician</label><select id="f_jtech">${techOptions(editing?editing.technicianId:null)}</select></div>
+        <div class="field"><label>Status</label><select id="f_jstatus">${statusOptions(editing?editing.status:'Received')}</select></div>
+      </div>
+      <div class="field"><label>Date Received</label><input type="date" id="f_jdate" value="${editing?editing.receivedDate:todayISO()}"></div>
+      <div class="field"><label>Issue Reported by Customer *</label><textarea id="f_jissue" placeholder="e.g. Laptop won't turn on, battery drains fast...">${editing?editing.issueReported:''}</textarea></div>
+      <div class="field"><label>Inspection Details</label><textarea id="f_jinspection" placeholder="Technician's diagnosis findings">${editing?editing.inspectionDetails||'':''}</textarea></div>
+      <div class="grid cols-2">
+        <div class="field"><label>Estimate Amount</label><input type="number" id="f_jestimate" value="${editing?editing.estimateAmount||'':''}"></div>
+        <div class="field"><label>Final Amount (on delivery)</label><input type="number" id="f_jfinal" value="${editing?editing.finalAmount||'':''}"></div>
+      </div>
+      <div class="field"><label>Notes</label><textarea id="f_jnotes">${editing?editing.notes||'':''}</textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn amber" onclick="saveJob(${editing?editing.id:'null'})">Save Job Order</button>
+    </div>
+  `);
+}
+async function saveJob(id){
+  const customerId = Number(document.getElementById('f_jcust').value);
+  const deviceId = Number(document.getElementById('f_jdevice').value);
+  const issueReported = document.getElementById('f_jissue').value.trim();
+  if(!customerId || !deviceId || !issueReported){ alert('Customer, device, and issue description are required.'); return; }
+  const status = document.getElementById('f_jstatus').value;
+  const data = {
+    customerId, deviceId,
+    technicianId: document.getElementById('f_jtech').value ? Number(document.getElementById('f_jtech').value) : null,
+    status,
+    receivedDate: document.getElementById('f_jdate').value,
+    issueReported,
+    inspectionDetails: document.getElementById('f_jinspection').value.trim(),
+    estimateAmount: document.getElementById('f_jestimate').value,
+    finalAmount: document.getElementById('f_jfinal').value,
+    notes: document.getElementById('f_jnotes').value.trim(),
+  };
+  if(id){
+    const job = DB.jobs.find(x=>x.id===id);
+    if(job.status !== status){
+      job.history = job.history || [];
+      job.history.push({status, date: new Date().toISOString()});
+    }
+    Object.assign(job, data);
+  } else {
+    data.id = nextId('job');
+    data.jobNumber = String(data.id).padStart(4,'0');
+    data.history = [{status, date: new Date().toISOString()}];
+    DB.jobs.push(data);
+  }
+  
+  // Wait for the cloud to sync before updating the screen
+  await saveDB(); 
+  closeModal();
+  if(currentPage==='board') renderBoard(document.getElementById('content'));
+  else renderJobs(document.getElementById('content'));
+}
+function deleteJob(id){
+  if(!confirm('Delete this job order? This cannot be undone.')) return;
+  DB.jobs = DB.jobs.filter(x=>x.id!==id);
+  saveDB(); renderJobs(document.getElementById('content'));
+}
+function viewJob(id){
+  const j = DB.jobs.find(x=>x.id===id);
+  const cust = DB.customers.find(x=>x.id===j.customerId);
+  const dev = DB.devices.find(x=>x.id===j.deviceId);
+  const tech = DB.technicians.find(x=>x.id===j.technicianId);
+  const hist = (j.history||[]).slice().reverse();
+  openModal(`
+    <div class="modal-head"><h2>Job #${j.jobNumber} <span class="badge ${statusClass(j.status)}">${j.status}</span></h2><button class="close-x" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="grid cols-2">
+        <div><label>Customer</label>${cust?`<a class="link" onclick="closeModal();viewCustomer(${cust.id})">${cust.name}</a>`:'—'}<div class="hint">${cust?cust.phone:''}</div></div>
+        <div><label>Device</label>${dev?`${dev.type} — ${dev.brand} ${dev.model}`:'—'}<div class="hint">S/N: ${dev?dev.serialNumber||'n/a':''}</div></div>
+      </div>
+      <div class="grid cols-2" style="margin-top:14px;">
+        <div><label>Technician</label>${tech?tech.name:'Unassigned'}</div>
+        <div><label>Received</label>${fmtDate(j.receivedDate)}</div>
+      </div>
+      <div style="margin-top:14px;"><label>Issue Reported</label>${j.issueReported||'—'}</div>
+      <div style="margin-top:14px;"><label>Inspection Details</label>${j.inspectionDetails||'<span class="hint">Not recorded yet.</span>'}</div>
+      <div class="grid cols-2" style="margin-top:14px;">
+        <div><label>Estimate</label><span class="money">${j.estimateAmount?money(j.estimateAmount):'—'}</span></div>
+        <div><label>Final Amount</label><span class="money">${j.finalAmount?money(j.finalAmount):'—'}</span></div>
+      </div>
+      ${j.notes?`<div style="margin-top:14px;"><label>Notes</label>${j.notes}</div>`:''}
+      <div style="margin-top:18px;"><label>Status History</label>
+        <div class="timeline">
+          ${hist.map(h=>`<div class="timeline-item"><div>${h.status}</div><div class="t">${new Date(h.date).toLocaleString()}</div></div>`).join('') || '<div class="hint">No history yet.</div>'}
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn info" style="background:var(--info);" onclick="triggerPrintJob(${j.id})">🖨️ Print Receipt</button>
+      <button class="btn ghost" onclick="closeModal()">Close</button>
+      <button class="btn amber" onclick="closeModal();openJobForm(${j.id})">Edit Job</button>
+    </div>
+  `);
+}
+
+/* ---------------- JOB BOARD (Kanban) ---------------- */
+function renderBoard(c){
+  setTopbar('Job Board','Visual status of every active job order', `<button class="btn amber" onclick="openJobForm()">+ New Job Order</button>`);
+  const cols = STATUS_LIST.filter(s=>s.key!=='Cancelled');
+  c.innerHTML = `<div class="kanban">
+    ${cols.map(col=>{
+      const jobs = DB.jobs.filter(j=>j.status===col.key);
+      return `<div class="kcol">
+        <h3><span>${col.key}</span><span>${jobs.length}</span></h3>
+        ${jobs.map(j=>{
+          const cust = DB.customers.find(x=>x.id===j.customerId);
+          const dev = DB.devices.find(x=>x.id===j.deviceId);
+          return `<div class="kcard" onclick="viewJob(${j.id})">
+            <div class="jn">#${j.jobNumber}</div>
+            <div class="cn">${cust?cust.name:'—'}</div>
+            <div class="dv">${dev?`${dev.brand} ${dev.model}`:''}</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+/* ---------------- INIT ---------------- */
+// Instead of immediate rendering, pull your cloud data first
+loadDB();
+renderNav();
+renderPage();
+</script>
+</body>
+</html>
